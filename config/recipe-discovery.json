@@ -1,0 +1,26 @@
+{
+  "sources": [
+    {
+      "name": "Spoonacular",
+      "priority": 1,
+      "apiIntegration": true,
+      "defaultSearchParams": {
+        "diet": "vegetarian",
+        "maxReadyTime": 30
+      }
+    },
+    {
+      "name": "Local Database",
+      "priority": 2
+    },
+    {
+      "name": "Web Scraping",
+      "priority": 3,
+      "sites": ["101cookbooks", "smittenkitchen"]
+    }
+  ],
+  "preferences": {
+    "maxRecipesPerSearch": 10,
+    "cacheTimeout": 86400000
+  }
+}

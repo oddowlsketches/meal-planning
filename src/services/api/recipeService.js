@@ -1,0 +1,106 @@
+/**
+ * Recipe Service
+ * Handles interactions with the recipe API endpoints
+ */
+
+import { ENDPOINTS } from './config.js';
+import { get, post, put, del } from './apiService.js';
+
+/**
+ * Get all recipes
+ * @returns {Promise<Array>} - Array of recipes
+ */
+export const getAllRecipes = async () => {
+  const response = await get(ENDPOINTS.RECIPES);
+  return response.recipes || [];
+};
+
+/**
+ * Get a specific recipe by ID
+ * @param {number} id - Recipe ID
+ * @returns {Promise<Object>} - Recipe details
+ */
+export const getRecipeById = async (id) => {
+  const response = await get(ENDPOINTS.RECIPE_BY_ID(id));
+  return response.recipe;
+};
+
+/**
+ * Search recipes by query
+ * @param {string} query - Search term
+ * @returns {Promise<Array>} - Array of matching recipes
+ */
+export const searchRecipes = async (query) => {
+  const response = await get(ENDPOINTS.RECIPE_SEARCH, { query });
+  return response.recipes || [];
+};
+
+/**
+ * Get recipe suggestions based on available ingredients
+ * @param {Array} ingredients - List of ingredients to match
+ * @param {Object} preferences - User preferences for suggestions
+ * @returns {Promise<Array>} - Array of suggested recipes
+ */
+export const getRecipeSuggestions = async (ingredients, preferences = {}) => {
+  const response = await post(ENDPOINTS.RECIPE_SUGGESTIONS, {
+    ingredients,
+    preferences
+  });
+  return response.recipes || [];
+};
+
+/**
+ * Add a new recipe
+ * @param {Object} recipe - Recipe data
+ * @returns {Promise<Object>} - Added recipe with ID
+ */
+export const addRecipe = async (recipe) => {
+  const response = await post(ENDPOINTS.RECIPES, recipe);
+  return response;
+};
+
+/**
+ * Format a raw recipe object into a normalized format
+ * @param {Object} recipe - Raw recipe data
+ * @returns {Object} - Normalized recipe
+ */
+export const normalizeRecipe = (recipe) => {
+  // Basic validation
+  if (!recipe) return null;
+  
+  // Extract ingredients array if needed
+  let ingredients = recipe.ingredients || [];
+  if (!Array.isArray(ingredients)) {
+    // Handle if ingredients are stored in a different format
+    if (typeof ingredients === 'string') {
+      ingredients = ingredients.split('\n').filter(Boolean);
+    } else {
+      ingredients = [];
+    }
+  }
+  
+  return {
+    id: recipe.id,
+    title: recipe.title || 'Untitled Recipe',
+    description: recipe.description || '',
+    instructions: recipe.instructions || '',
+    ingredients: ingredients,
+    image: recipe.image || null,
+    sourceUrl: recipe.source_url || recipe.sourceUrl || '',
+    sourceName: recipe.source_name || recipe.sourceName || '',
+    recipeType: recipe.recipe_type || recipe.recipeType || '',
+    cuisineType: recipe.cuisine_type || recipe.cuisineType || '',
+    readyInMinutes: recipe.readyInMinutes || recipe.ready_in_minutes || null,
+    servings: recipe.servings || null,
+    dateAdded: recipe.created_at || recipe.dateAdded || new Date().toISOString()
+  };
+};
+
+export default {
+  getAllRecipes,
+  getRecipeById,
+  searchRecipes,
+  getRecipeSuggestions,
+  addRecipe,
+  normalizeRecipe
+};

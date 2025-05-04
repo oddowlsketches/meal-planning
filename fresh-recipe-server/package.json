@@ -1,0 +1,20 @@
+{
+  "name": "fresh-recipe-server",
+  "version": "1.0.0",
+  "description": "Recipe MCP server with clean database integration and web scraping",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.7.0",
+    "better-sqlite3": "^9.4.3",
+    "cheerio": "^1.0.0-rc.12",
+    "puppeteer": "^22.10.0",
+    "zod": "^3.24.2"
+  }
+}

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receipt Scanner Test UI</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1, h2, h3 {
+            color: #333;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .input-section {
+            flex: 1;
+            min-width: 300px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .results-section {
+            flex: 2;
+            min-width: 300px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .drop-area {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .drop-area:hover, .drop-area.active {
+            background-color: #f0f0f0;
+            border-color: #999;
+        }
+        .hidden {
+            display: none;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        input[type="file"] {
+            margin-bottom: 10px;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .item-list {
+            list-style: none;
+            padding: 0;
+        }
+        .item {
+            padding: 10px;
+            margin-bottom: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+        }
+        .tab-container {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background-color: #eee;
+            cursor: pointer;
+            border: 1px solid #ddd;
+        }
+        .tab.active {
+            background-color: white;
+            border-bottom: none;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .receipt-image {
+            max-width: 100%;
+            max-height: 300px;
+            display: block;
+            margin: 0 auto 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Receipt Scanner Test UI</h1>
+    <p>This simple interface allows you to test the receipt scanning functionality. Upload a receipt image to see how the OCR and parsing works.</p>
+    
+    <div class="container">
+        <div class="input-section">
+            <h2>Upload Receipt</h2>
+            <div class="drop-area" id="dropArea">
+                <p>Drag & drop a receipt image here</p>
+                <p>or</p>
+                <input type="file" id="fileInput" accept="image/*">
+                <p><small>Accepted formats: JPEG, PNG, GIF, WEBP</small></p>
+            </div>
+            <button id="uploadBtn" disabled>Process Receipt</button>
+        </div>
+        
+        <div class="results-section">
+            <h2>Results</h2>
+            <div id="loader" class="loader hidden"></div>
+            
+            <div class="tab-container">
+                <div class="tab active" data-tab="items">Parsed Items</div>
+                <div class="tab" data-tab="ocr">OCR Text</div>
+                <div class="tab" data-tab="raw">Raw JSON</div>
+            </div>
+            
+            <div id="resultsContainer">
+                <div id="receipt-preview"></div>
+                
+                <div class="tab-content active" id="items-tab">
+                    <h3>Identified Items</h3>
+                    <p id="itemCount">No items found yet.</p>
+                    <ul class="item-list" id="itemList"></ul>
+                </div>
+                
+                <div class="tab-content" id="ocr-tab">
+                    <h3>Extracted OCR Text</h3>
+                    <pre id="ocrText">No text extracted yet.</pre>
+                </div>
+                
+                <div class="tab-content" id="raw-tab">
+                    <h3>Raw Response</h3>
+                    <pre id="rawJson">No data yet.</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM elements
+        const dropArea = document.getElementById('dropArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const loader = document.getElementById('loader');
+        const itemList = document.getElementById('itemList');
+        const itemCount = document.getElementById('itemCount');
+        const ocrText = document.getElementById('ocrText');
+        const rawJson = document.getElementById('rawJson');
+        const receiptPreview = document.getElementById('receipt-preview');
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        // Tab functionality
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.getAttribute('data-tab');
+                
+                // Update active tab
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // Show active content
+                tabContents.forEach(content => content.classList.remove('active'));
+                document.getElementById(`${tabId}-tab`).classList.add('active');
+            });
+        });
+
+        // Drag and drop handlers
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+        
+        function highlight() {
+            dropArea.classList.add('active');
+        }
+        
+        function unhighlight() {
+            dropArea.classList.remove('active');
+        }
+        
+        // Handle dropped files
+        dropArea.addEventListener('drop', handleDrop, false);
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+        
+        // File input change handler
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+        
+        function handleFiles(files) {
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type.startsWith('image/')) {
+                    uploadBtn.disabled = false;
+                    // Show preview
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        receiptPreview.innerHTML = `<img src="${e.target.result}" alt="Receipt preview" class="receipt-image">`;
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    alert('Please select an image file.');
+                }
+            }
+        }
+        
+        // Upload handler
+        uploadBtn.addEventListener('click', async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            // Show loader
+            loader.classList.remove('hidden');
+            uploadBtn.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('receipt', file);
+
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                console.log('Response:', data);
+
+                // Display raw JSON
+                rawJson.textContent = JSON.stringify(data, null, 2);
+
+                // Display OCR text
+                if (data.ocr && data.ocr.text) {
+                    ocrText.textContent = data.ocr.text;
+                } else {
+                    ocrText.textContent = 'No OCR text available';
+                }
+
+                // Display parsed items
+                if (data.parsed && data.parsed.items && data.parsed.items.length > 0) {
+                    itemCount.textContent = `Found ${data.parsed.items.length} items:`;
+                    itemList.innerHTML = data.parsed.items.map(item => `
+                        <li class="item">
+                            <strong>${item.name}</strong><br>
+                            Price: $${item.price.toFixed(2)}<br>
+                            Quantity: ${item.quantity} ${item.unit}<br>
+                            Category: ${item.category}<br>
+                            Confidence: ${item.confidence}
+                        </li>
+                    `).join('');
+                } else {
+                    itemCount.textContent = 'No items found';
+                    itemList.innerHTML = '';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error processing receipt. Please try again.');
+            } finally {
+                // Hide loader
+                loader.classList.add('hidden');
+                uploadBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

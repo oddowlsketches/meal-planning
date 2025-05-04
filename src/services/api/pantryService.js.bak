@@ -1,0 +1,106 @@
+/**
+ * Pantry Service
+ * Handles interactions with the pantry API endpoints
+ */
+
+import { ENDPOINTS } from './config';
+import { get, post, put, del } from './apiService';
+
+/**
+ * Get all pantry items
+ * @returns {Promise<Array>} - Array of pantry items
+ */
+export const getAllPantryItems = async () => {
+  const response = await get(ENDPOINTS.PANTRY_ITEMS);
+  return response.items || [];
+};
+
+/**
+ * Add a new pantry item
+ * @param {Object} item - Pantry item data
+ * @returns {Promise<Object>} - Added item with ID
+ */
+export const addPantryItem = async (item) => {
+  const response = await post(ENDPOINTS.PANTRY_ITEMS, item);
+  return response;
+};
+
+/**
+ * Update a pantry item
+ * @param {number} id - Item ID
+ * @param {Object} item - Updated pantry item data
+ * @returns {Promise<Object>} - Update result
+ */
+export const updatePantryItem = async (id, item) => {
+  const response = await put(ENDPOINTS.PANTRY_ITEM_BY_ID(id), item);
+  return response;
+};
+
+/**
+ * Delete a pantry item
+ * @param {number} id - Item ID to delete
+ * @returns {Promise<Object>} - Delete result
+ */
+export const deletePantryItem = async (id) => {
+  const response = await del(ENDPOINTS.PANTRY_ITEM_BY_ID(id));
+  return response;
+};
+
+/**
+ * Process a receipt image to extract pantry items
+ * @param {File} imageFile - Receipt image file
+ * @returns {Promise<Object>} - Extracted items
+ */
+export const processReceipt = async (imageFile) => {
+  // Create a FormData object for the file upload
+  const formData = new FormData();
+  formData.append('image', imageFile);
+  
+  // Custom request for file upload (can't use the standard post helper)
+  const response = await fetch(`${ENDPOINTS.PANTRY_RECEIPT}`, {
+    method: 'POST',
+    body: formData
+  });
+  
+  if (!response.ok) {
+    let errorMessage;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.error || `API error: ${response.status}`;
+    } catch (e) {
+      errorMessage = `API error: ${response.status}`;
+    }
+    throw new Error(errorMessage);
+  }
+  
+  return await response.json();
+};
+
+/**
+ * Normalize a pantry item
+ * @param {Object} item - Raw pantry item data
+ * @returns {Object} - Normalized pantry item
+ */
+export const normalizePantryItem = (item) => {
+  if (!item) return null;
+  
+  return {
+    id: item.id,
+    name: item.name || '',
+    category: item.category || null,
+    quantity: item.quantity || null,
+    unit: item.unit || null,
+    purchaseDate: item.purchase_date || item.purchaseDate || null,
+    estimatedExpiry: item.estimated_expiry || item.estimatedExpiry || null,
+    dateAdded: item.created_at || new Date().toISOString()
+  };
+};
+
+export default {
+  getAllPantryItems,
+  addPantryItem,
+  updatePantryItem,
+  deletePantryItem,
+  processReceipt,
+  normalizePantryItem
+};
